@@ -1,0 +1,9 @@
+
+{
+  "name": "VillageHealth AI",
+  "description": "An AI-powered healthcare assistant for underprivileged communities, providing multilingual medical guidance, clinic finding, and voice-activated support for remote areas.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}
