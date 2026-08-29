@@ -10,23 +10,6 @@
 
 ---
 
-## 🚨 IMPORTANT SECURITY WARNING: WHAT TO HIDE FROM PUBLIC GITHUB
-
-> [!CAUTION]
-> **NEVER commit your `.env` or `.env.local` files to public GitHub repositories!**  
-> Exposing your private API keys (`GEMINI_API_KEY` or Firebase private keys) publicly can lead to unauthorized usage and quota exhaustion.
-
-### Protected Files (Already in `.gitignore`):
-- `.env`
-- `.env.local`
-- `.env.production.local`
-- `node_modules/`
-- `dist/`
-
-Always use **Environment Variables** settings when deploying to hosting platforms like Vercel, Netlify, or Firebase Hosting.
-
----
-
 ## ✨ Features
 
 ### 1. 🩸 Real-Time Blood Bank & Donor Portal
@@ -106,7 +89,7 @@ Always use **Environment Variables** settings when deploying to hosting platform
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/villagehealth-ai.git
+   git clone https://github.com/deiwick/Villagehealth_A.I.git
    cd villagehealth-ai
    ```
 
@@ -146,13 +129,13 @@ git init
 git add .
 git commit -m "Initial commit: VillageHealth AI with Realtime Blood Bank & Gemini Triage"
 git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/villagehealth-ai.git
+git remote add origin https://github.com/deiwick/Villagehealth_A.I.git
 git push -u origin main
 ```
 
 ### Step 2: Deploy to Vercel (Recommended)
 1. Go to [Vercel](https://vercel.com) and click **Add New Project**.
-2. Import your `villagehealth-ai` GitHub repository.
+2. Import your `Villagehealth_A.I` GitHub repository.
 3. In **Environment Variables**, add:
    - `GEMINI_API_KEY`
    - `VITE_FIREBASE_API_KEY`
