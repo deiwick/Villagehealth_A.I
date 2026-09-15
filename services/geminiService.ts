@@ -1,4 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { HealthCenter } from "../types";
 
 const getApiKey = () => 
   process.env.API_KEY || 
@@ -113,4 +114,46 @@ export const parseGroundingSources = (response: GenerateContentResponse) => {
   }
   
   return sources;
+};
+
+export const findNearbyClinics = async (
+  lat: number,
+  lng: number,
+  specialtyId: string
+): Promise<GenerateContentResponse> => {
+  const query = `Find top-rated public health centers, hospitals, and clinics near latitude ${lat}, longitude ${lng} specializing in ${specialtyId}. Include address, phone, and key services.`;
+  return chatWithHealthAssistant(query, 'English', { latitude: lat, longitude: lng }, specialtyId);
+};
+
+export const parseHealthCenters = (response: GenerateContentResponse): HealthCenter[] => {
+  const sources = parseGroundingSources(response);
+  const mapSources = sources.filter(s => s.type === 'Clinic');
+
+  return mapSources.map((s, idx) => ({
+    id: `center-${idx}`,
+    name: s.title || 'Community Health Facility',
+    address: s.address || 'Location verified on map',
+    phone: '108 / 112',
+    type: 'Hospital',
+    rating: 4.7,
+    openNow: true,
+    uri: s.uri,
+    snippet: s.snippet,
+  }));
+};
+
+export const getMedicationInfo = async (
+  medicationName: string,
+  languageName: string
+): Promise<string> => {
+  const prompt = `Provide a clear, patient-friendly medical guide for the medicine '${medicationName}' in ${languageName}. 
+  Cover:
+  1. What it is used for (Primary Indications)
+  2. Standard dosage & timing (Before/After meals)
+  3. Important precautions & common side effects
+  4. Low-cost generic alternatives under Indian Jan Aushadhi
+  5. Crucial warning: When NOT to take it.`;
+
+  const response = await chatWithHealthAssistant(prompt, languageName);
+  return response.text || "Medication information currently unavailable.";
 };

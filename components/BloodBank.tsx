@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Droplets, Search, Bell, Heart, Building2,
+  Droplets, Search, Heart, Building2,
   AlertTriangle, CheckCircle2, Phone, Clock,
   ChevronDown, Loader2, RefreshCw, UserPlus,
-  Siren, X, Activity, Info, MapPin
+  Siren, Activity, Info, MapPin, ShieldCheck
 } from 'lucide-react';
 import { SupportedLanguage, BloodType, BloodRequest, BloodDonor, BloodBank as IBloodBank, BloodBankStock } from '../types';
 import {
@@ -11,9 +11,6 @@ import {
   fulfillBloodRequest, subscribeToBloodRequests,
   ALL_BLOOD_TYPES, TN_DISTRICTS, formatTimeAgo, isFirebaseConfigured
 } from '../services/bloodBankService';
-
-// Re-export isFirebaseConfigured for use in component
-import('../services/firebaseConfig').catch(() => {});
 
 interface BloodBankProps {
   language: SupportedLanguage;
@@ -32,6 +29,18 @@ const BLOOD_TYPE_COLORS: Record<BloodType, string> = {
   'A+': 'bg-blue-600', 'A-': 'bg-blue-800',
   'B+': 'bg-emerald-600', 'B-': 'bg-emerald-800',
   'AB+': 'bg-purple-600', 'AB-': 'bg-purple-800',
+};
+
+// Medical Blood Group Compatibility Matrix
+const COMPATIBLE_DONOR_TYPES: Record<BloodType, BloodType[]> = {
+  'A+': ['A+', 'A-', 'O+', 'O-'],
+  'A-': ['A-', 'O-'],
+  'B+': ['B+', 'B-', 'O+', 'O-'],
+  'B-': ['B-', 'O-'],
+  'AB+': ['AB+', 'AB-', 'A+', 'A-', 'B+', 'B-', 'O+', 'O-'],
+  'AB-': ['AB-', 'A-', 'B-', 'O-'],
+  'O+': ['O+', 'O-'],
+  'O-': ['O-'],
 };
 
 const EMPTY_STOCK: BloodBankStock = { 'A+': 0, 'A-': 0, 'B+': 0, 'B-': 0, 'O+': 0, 'O-': 0, 'AB+': 0, 'AB-': 0 };
@@ -115,7 +124,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
         notes: reqForm.notes,
         fulfilledBy: null,
       });
-      setReqSuccess(isTa ? 'உங்கள் இரத்தக் கோரிக்கை அனுப்பப்பட்டது! தொடர்புடைய இரத்த வங்கிகள் மற்றும் தானியாளர்களுக்கு அறிவிப்பு அனுப்பப்பட்டது.' : 'Blood request posted! Nearby donors and blood banks have been alerted.');
+      setReqSuccess(isTa ? 'உங்கள் இரத்தக் கோரிக்கை வெற்றிகரமாக அனுப்பப்பட்டது! அருகிலுள்ள தானியாளர்கள் மற்றும் இரத்த வங்கிகளுக்கு அறிவிப்பு அனுப்பப்பட்டது.' : 'Blood request posted! Nearby donors and blood banks have been alerted.');
       setReqForm({ patientName: '', bloodType: '', hospital: '', district: '', units: 1, urgency: 'URGENT', contactPhone: '', notes: '' });
     } catch (e) {
       console.error(e);
@@ -138,7 +147,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
         totalDonations: 0,
         lastDonated: null,
       });
-      setDonorSuccess(isTa ? 'நன்றி! நீங்கள் தானியாளராக பதிவு செய்யப்பட்டீர்கள். உங்கள் இரத்த வகை தேவைப்படும்போது நாங்கள் தொடர்பு கொள்வோம்.' : 'Thank you! You\'re now registered as a donor. We\'ll alert you when your blood type is urgently needed.');
+      setDonorSuccess(isTa ? 'நன்றி! நீங்கள் தானியாளராக பதிவு செய்யப்பட்டீர்கள். உங்கள் இரத்த வகை தேவைப்படும்போது நாங்கள் தொடர்பு கொள்வோம்.' : "Thank you! You're registered as a donor. We'll alert you when your blood group is needed.");
       setDonorForm({ name: '', bloodType: '', district: '', phone: '', available: true });
     } catch (e) {
       console.error(e);
@@ -161,7 +170,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
         operatingHours: bankForm.operatingHours,
         stock: bankStock,
       });
-      setBankSuccess(isTa ? 'இரத்த வங்கி வெற்றிகரமாக பதிவு செய்யப்பட்டது! இரத்த கையிருப்பு நேரடியாக புதுப்பிக்கப்படும்.' : 'Blood bank registered! Stock levels will now sync in real-time.');
+      setBankSuccess(isTa ? 'இரத்த வங்கி வெற்றிகரமாக பதிவு செய்யப்பட்டது! கையிருப்பு நேரடியாக புதுப்பிக்கப்படும்.' : 'Blood bank registered! Stock levels will now sync in real-time.');
       setBankForm({ name: '', address: '', district: '', phone: '', type: 'Government', operatingHours: '24/7' });
       setBankStock({ ...EMPTY_STOCK });
     } catch (e) {
@@ -190,20 +199,22 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
     { id: 'BANK_DASHBOARD', label: 'Bank Portal', labelTa: 'வங்கி போர்டல்', icon: <Building2 size={16} /> },
   ];
 
+  const compatibleGroups = searchBloodType ? COMPATIBLE_DONOR_TYPES[searchBloodType as BloodType] : [];
+
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-rose-700 to-rose-600 text-white px-6 py-5">
+      <div className="bg-gradient-to-r from-rose-700 to-rose-600 text-white px-4 md:px-6 py-5">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-white/20 rounded-2xl">
+            <div className="p-2.5 bg-white/20 rounded-2xl shrink-0">
               <Droplets size={26} className="text-white" />
             </div>
             <div>
               <h2 className="text-xl font-black">
                 {isTa ? 'இரத்த வங்கி உதவி போர்டல்' : 'Blood Bank Availability Portal'}
               </h2>
-              <p className="text-rose-100 text-xs mt-0.5">
+              <p className="text-rose-100 text-xs mt-0.5 font-medium">
                 {isTa ? 'நேரடி கையிருப்பு • தானியாளர் பதிவு • அவசர கோரிக்கைகள்' : 'Live Stock • Donor Registry • Urgent Requests'}
               </p>
             </div>
@@ -212,19 +223,19 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
           {/* Firebase status badge */}
           <div className={`mt-3 inline-flex items-center space-x-1.5 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full ${isFirebaseConfigured ? 'bg-emerald-500/30 text-emerald-100 border border-emerald-400/30' : 'bg-white/20 text-rose-100 border border-white/20'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${isFirebaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-yellow-400'}`} />
-            <span>{isFirebaseConfigured ? (isTa ? 'நேரடி ஒத்திசைவு செயல்படுகிறது' : 'Live sync active') : (isTa ? 'டெமோ பயன்முறை — Firebase கட்டமைக்கவில்லை' : 'Demo mode — Firebase not configured')}</span>
+            <span>{isFirebaseConfigured ? (isTa ? 'நேரடி ஒத்திசைவு செயல்படுகிறது (Firebase)' : 'Live sync active (Firebase)') : (isTa ? 'டெமோ பயன்முறை — Firebase கட்டமைக்கவில்லை' : 'Demo mode — Firebase not configured')}</span>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-slate-200 overflow-x-auto">
+      {/* Navigation Tabs */}
+      <div className="bg-white border-b border-slate-200 overflow-x-auto scrollbar-none">
         <div className="flex max-w-4xl mx-auto">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-1.5 px-4 py-3.5 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${
+              className={`flex items-center space-x-1.5 px-4 py-3.5 text-xs font-bold whitespace-nowrap border-b-2 transition-colors min-h-[44px] ${
                 activeTab === tab.id
                   ? 'border-rose-600 text-rose-700 bg-rose-50/50'
                   : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
@@ -246,7 +257,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
         {/* ── SEARCH TAB ── */}
         {activeTab === 'SEARCH' && (
           <div className="space-y-5">
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-5">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 md:p-6 space-y-5">
               <h3 className="font-extrabold text-slate-800 text-base flex items-center">
                 <Search size={20} className="text-rose-600 mr-2" />
                 {isTa ? 'இரத்த கையிருப்பு தேடுக' : 'Search Blood Availability'}
@@ -255,7 +266,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Blood Type */}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
                     {isTa ? 'இரத்த வகை' : 'Blood Group'}
                   </label>
                   <div className="grid grid-cols-4 gap-2">
@@ -263,7 +274,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                       <button
                         key={bt}
                         onClick={() => setSearchBloodType(bt)}
-                        className={`py-2.5 rounded-xl font-black text-sm transition-all ${
+                        className={`py-2.5 rounded-xl font-black text-sm transition-all min-h-[40px] ${
                           searchBloodType === bt
                             ? `${BLOOD_TYPE_COLORS[bt]} text-white shadow-md ring-2 ring-offset-1 ring-rose-400`
                             : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -275,16 +286,16 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                   </div>
                 </div>
 
-                {/* District */}
+                {/* District Selector */}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
                     {isTa ? 'மாவட்டம்' : 'District'}
                   </label>
                   <div className="relative">
                     <select
                       value={searchDistrict}
                       onChange={e => setSearchDistrict(e.target.value)}
-                      className="w-full bg-slate-100 border-none rounded-2xl py-3 pl-4 pr-10 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-rose-500 appearance-none"
+                      className="w-full bg-slate-100 border-none rounded-2xl py-3.5 pl-4 pr-10 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-rose-500 appearance-none min-h-[44px]"
                     >
                       <option value="">{isTa ? 'மாவட்டத்தை தேர்ந்தெடு...' : 'Select district...'}</option>
                       {TN_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
@@ -297,19 +308,36 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
               <button
                 onClick={handleSearch}
                 disabled={!searchBloodType || !searchDistrict || searchLoading}
-                className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl font-bold text-sm shadow-md transition-all flex items-center justify-center space-x-2"
+                className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl font-bold text-sm shadow-md transition-all flex items-center justify-center space-x-2 min-h-[48px]"
               >
                 {searchLoading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
                 <span>{searchLoading ? (isTa ? 'தேடுகிறது...' : 'Searching...') : (isTa ? 'இப்போது தேடு' : 'Search Now')}</span>
               </button>
             </div>
 
+            {/* Medical Compatibility Banner */}
+            {searchBloodType && (
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start space-x-3">
+                <ShieldCheck size={20} className="text-rose-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-rose-900 space-y-1 font-medium">
+                  <p className="font-bold">
+                    {isTa ? `மருத்துவ இரத்த இணக்கத்தன்மை (${searchBloodType}):` : `Medical Compatibility (${searchBloodType}):`}
+                  </p>
+                  <p>
+                    {isTa 
+                      ? `${searchBloodType} நோயாளிக்கு ஏற்புடைய தானியாளர் குழுக்கள்: ${compatibleGroups.join(', ')}.` 
+                      : `A patient with ${searchBloodType} can safely receive blood from: ${compatibleGroups.join(', ')}.`}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Search Results */}
             {searchResults && (
               <div className="space-y-4 animate-in fade-in">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-slate-700 text-sm">
-                    {isTa ? `${searchDistrict} மாவட்டத்தில் ${searchBloodType} இரத்த கிடைக்கும் இடங்கள்:` : `${searchBloodType} availability in ${searchDistrict}:`}
+                    {isTa ? `${searchDistrict} மாவட்டத்தில் ${searchBloodType} கையிருப்பு:` : `${searchBloodType} availability in ${searchDistrict}:`}
                   </h3>
                   <div className="flex items-center space-x-2">
                     <span className="text-[10px] text-slate-400">{isTa ? 'புதுப்பிக்கப்பட்டது' : 'Updated'} {formatTimeAgo(lastSearched)}</span>
@@ -332,21 +360,24 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                           <div>
                             <h4 className="font-bold text-slate-800 text-sm">{bank.name}</h4>
                             <p className="text-xs text-slate-500 flex items-center mt-0.5">
-                              <MapPin size={11} className="mr-1 text-rose-500" />{bank.address}
+                              <MapPin size={11} className="mr-1 text-rose-500 shrink-0" />{bank.address}
                             </p>
                           </div>
                           <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full uppercase shrink-0">{bank.type}</span>
                         </div>
 
-                        {/* Stock display */}
+                        {/* Stock breakdown */}
                         <div className="bg-slate-50 rounded-2xl p-3">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{isTa ? 'தற்போதைய கையிருப்பு:' : 'Current Stock:'}</p>
                           <div className="flex flex-wrap gap-2">
                             {ALL_BLOOD_TYPES.map(bt => {
                               const count = bank.stock[bt] ?? 0;
                               const isTarget = bt === searchBloodType;
+                              const isCompatible = compatibleGroups.includes(bt);
                               return (
-                                <div key={bt} className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-bold ${isTarget ? (count > 0 ? 'bg-emerald-600 text-white ring-2 ring-emerald-200' : 'bg-rose-600 text-white') : 'bg-white border border-slate-200 text-slate-600'}`}>
+                                <div key={bt} className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-bold ${
+                                  isTarget ? (count > 0 ? 'bg-emerald-600 text-white ring-2 ring-emerald-200' : 'bg-rose-600 text-white') : isCompatible && count > 0 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-white border border-slate-200 text-slate-600'
+                                }`}>
                                   <span>{bt}</span>
                                   <span className="opacity-80">×{count}</span>
                                 </div>
@@ -360,7 +391,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                             <Clock size={11} className="mr-1" />
                             {bank.operatingHours} · {isTa ? 'புதுப்பிக்கப்பட்டது' : 'Updated'} {formatTimeAgo(bank.updatedAt)}
                           </p>
-                          <a href={`tel:${bank.phone}`} className="flex items-center space-x-1.5 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all">
+                          <a href={`tel:${bank.phone}`} className="flex items-center space-x-1.5 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all min-h-[38px]">
                             <Phone size={14} />
                             <span>{bank.phone}</span>
                           </a>
@@ -381,15 +412,15 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                       {searchResults.donors.map(donor => (
                         <div key={donor.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm">
                           <div className="flex items-center space-x-3">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white text-sm ${BLOOD_TYPE_COLORS[donor.bloodType]}`}>
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white text-sm shrink-0 ${BLOOD_TYPE_COLORS[donor.bloodType]}`}>
                               {donor.bloodType}
                             </div>
                             <div>
                               <p className="font-bold text-slate-800 text-sm">{donor.name}</p>
-                              <p className="text-[10px] text-slate-400">{donor.totalDonations || 0} {isTa ? 'தான்கள்' : 'donations'}</p>
+                              <p className="text-[10px] text-slate-400">{donor.totalDonations || 0} {isTa ? 'தானங்கள்' : 'donations'}</p>
                             </div>
                           </div>
-                          <a href={`tel:${donor.phone}`} className="p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-colors border border-rose-200">
+                          <a href={`tel:${donor.phone}`} className="p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-colors border border-rose-200 min-h-[38px] flex items-center">
                             <Phone size={16} />
                           </a>
                         </div>
@@ -398,7 +429,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                   </div>
                 )}
 
-                {/* No results */}
+                {/* No results banner */}
                 {searchResults.banks.length === 0 && searchResults.donors.length === 0 && (
                   <div className="bg-rose-50 border border-rose-200 rounded-3xl p-8 text-center space-y-3">
                     <AlertTriangle size={36} className="mx-auto text-rose-400" />
@@ -406,29 +437,16 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                       {isTa ? `${searchDistrict} மாவட்டத்தில் ${searchBloodType} இரத்தம் இப்போது கிடைக்கவில்லை` : `No ${searchBloodType} blood available in ${searchDistrict} right now`}
                     </p>
                     <p className="text-xs text-rose-600">
-                      {isTa ? 'உடனடியாக கோரிக்கை அனுப்ப, "இரத்தம் கோரு" தாவலைக் கிளிக் செய்யவும்' : 'Post an urgent request using the "Request Blood" tab to alert nearby donors'}
+                      {isTa ? 'உடனடியாக கோரிக்கை அனுப்ப "இரத்தம் கோரு" தாவலை சொடுக்கவும்.' : 'Post an urgent request to broadcast alerts to nearby donors.'}
                     </p>
                     <button
                       onClick={() => setActiveTab('REQUEST')}
-                      className="mt-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all"
+                      className="mt-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all min-h-[40px]"
                     >
                       {isTa ? 'அவசர கோரிக்கை அனுப்பு' : 'Post Urgent Request'}
                     </button>
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Info Box */}
-            {!searchResults && !searchLoading && (
-              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start space-x-3">
-                <Info size={18} className="text-blue-500 shrink-0 mt-0.5" />
-                <div className="text-xs text-blue-800 space-y-1">
-                  <p className="font-bold">{isTa ? 'எவ்வாறு பயன்படுத்துவது:' : 'How to use:'}</p>
-                  <p>{isTa ? '1. இரத்த வகையை தேர்வு செய்யவும்' : '1. Select your required blood group'}</p>
-                  <p>{isTa ? '2. மாவட்டத்தை தேர்வு செய்யவும்' : '2. Choose your district'}</p>
-                  <p>{isTa ? '3. "இப்போது தேடு" அழுத்தவும் — நேரடி கையிருப்பு தோன்றும்' : '3. Tap "Search Now" — live stock and donor data will appear'}</p>
-                </div>
               </div>
             )}
           </div>
@@ -462,7 +480,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                     <div key={req.id} className={`border-2 rounded-3xl p-5 space-y-3 ${urg.border}`}>
                       <div className="flex items-start justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-base ${BLOOD_TYPE_COLORS[req.bloodType]} ${urg.pulse ? 'animate-pulse' : ''}`}>
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-base shrink-0 ${BLOOD_TYPE_COLORS[req.bloodType]} ${urg.pulse ? 'animate-pulse' : ''}`}>
                             {req.bloodType}
                           </div>
                           <div>
@@ -473,7 +491,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                               </span>
                             </div>
                             <p className="text-xs text-slate-500 mt-0.5 flex items-center">
-                              <Building2 size={11} className="mr-1" />{req.hospital}, {req.district}
+                              <Building2 size={11} className="mr-1 shrink-0" />{req.hospital}, {req.district}
                             </p>
                           </div>
                         </div>
@@ -490,7 +508,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                       <div className="flex items-center space-x-2 pt-1">
                         <a
                           href={`tel:${req.contactPhone}`}
-                          className="flex-1 flex items-center justify-center space-x-2 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all"
+                          className="flex-1 flex items-center justify-center space-x-2 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all min-h-[40px]"
                         >
                           <Phone size={14} />
                           <span>{isTa ? 'தொடர்பு கொள்ளவும்' : 'Contact'} {req.contactPhone}</span>
@@ -498,7 +516,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                         <button
                           onClick={() => req.id && handleFulfill(req.id)}
                           disabled={fulfillLoading === req.id}
-                          className="flex items-center space-x-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all disabled:bg-slate-300"
+                          className="flex items-center space-x-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all disabled:bg-slate-300 min-h-[40px]"
                         >
                           {fulfillLoading === req.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                           <span>{isTa ? 'நிறைவேற்றப்பட்டது' : 'Fulfilled'}</span>
@@ -547,7 +565,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                   <div className="grid grid-cols-8 gap-1.5">
                     {ALL_BLOOD_TYPES.map(bt => (
                       <button key={bt} onClick={() => setReqForm(f => ({ ...f, bloodType: bt }))}
-                        className={`py-2.5 rounded-xl font-black text-sm transition-all ${reqForm.bloodType === bt ? `${BLOOD_TYPE_COLORS[bt]} text-white shadow-md` : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+                        className={`py-2.5 rounded-xl font-black text-sm transition-all min-h-[40px] ${reqForm.bloodType === bt ? `${BLOOD_TYPE_COLORS[bt]} text-white shadow-md` : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
                         {bt}
                       </button>
                     ))}
@@ -594,7 +612,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                 <button
                   onClick={handleSubmitRequest}
                   disabled={reqLoading || !reqForm.patientName || !reqForm.bloodType || !reqForm.hospital || !reqForm.district || !reqForm.contactPhone}
-                  className="w-full py-4 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl font-extrabold text-sm shadow-lg transition-all flex items-center justify-center space-x-2"
+                  className="w-full py-4 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl font-extrabold text-sm shadow-lg transition-all flex items-center justify-center space-x-2 min-h-[48px]"
                 >
                   {reqLoading ? <Loader2 size={18} className="animate-spin" /> : <Siren size={18} />}
                   <span>{reqLoading ? (isTa ? 'அனுப்புகிறது...' : 'Posting...') : (isTa ? 'அவசர கோரிக்கை அனுப்பு' : 'Post Urgent Request')}</span>
@@ -611,7 +629,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
               <Heart size={20} className="text-rose-500 shrink-0 mt-0.5 fill-rose-200" />
               <div className="text-xs text-rose-800 space-y-1">
                 <p className="font-bold text-sm">{isTa ? 'ஒரு உயிரை காப்பாற்றுங்கள் — இரத்தம் தானம் செய்யுங்கள்' : 'Save a life — Register as a Blood Donor'}</p>
-                <p>{isTa ? '18-65 வயதுடைய ஆரோக்கியமான நபர்கள் 3 மாதத்திற்கு ஒருமுறை இரத்தம் தானம் செய்யலாம்.' : 'Healthy individuals aged 18–65 can donate blood every 3 months.'}</p>
+                <p>{isTa ? '18-65 வயதுடைய ஆரோக்கியமான நபர்கள் 3 மாதத்திற்கு ஒருமுறை (90 நாட்கள் இடைவெளி) இரத்தம் தானம் செய்யலாம்.' : 'Healthy individuals aged 18–65 can donate blood every 3 months (90 days interval).'}</p>
               </div>
             </div>
 
@@ -640,7 +658,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                   <div className="grid grid-cols-8 gap-1.5">
                     {ALL_BLOOD_TYPES.map(bt => (
                       <button key={bt} onClick={() => setDonorForm(f => ({ ...f, bloodType: bt }))}
-                        className={`py-2.5 rounded-xl font-black text-sm transition-all ${donorForm.bloodType === bt ? `${BLOOD_TYPE_COLORS[bt]} text-white shadow-md` : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+                        className={`py-2.5 rounded-xl font-black text-sm transition-all min-h-[40px] ${donorForm.bloodType === bt ? `${BLOOD_TYPE_COLORS[bt]} text-white shadow-md` : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
                         {bt}
                       </button>
                     ))}
@@ -660,20 +678,20 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                 <div className="flex items-center space-x-3 bg-emerald-50 border border-emerald-200 p-4 rounded-2xl">
                   <button
                     onClick={() => setDonorForm(f => ({ ...f, available: !f.available }))}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${donorForm.available ? 'bg-emerald-600' : 'bg-slate-300'}`}
+                    className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ${donorForm.available ? 'bg-emerald-600' : 'bg-slate-300'}`}
                   >
                     <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${donorForm.available ? 'translate-x-6' : 'translate-x-0.5'}`} />
                   </button>
                   <div>
                     <p className="text-xs font-bold text-slate-800">{isTa ? 'இப்போது தானம் செய்ய தயாராக இருக்கிறேன்' : 'I am available to donate now'}</p>
-                    <p className="text-[10px] text-slate-500">{isTa ? 'இதை மாற்ற நீங்கள் எப்போது வேண்டுமானாலும் உங்கள் விருப்பத்தை புதுப்பிக்கலாம்' : 'You can update your availability anytime'}</p>
+                    <p className="text-[10px] text-slate-500">{isTa ? 'இதை மாற்ற நீங்கள் எப்போது வேண்டுமானாலும் உங்கள் விருப்பத்தை புதுப்பிக்கலாம்' : 'You can update your availability status anytime'}</p>
                   </div>
                 </div>
 
                 <button
                   onClick={handleRegisterDonor}
                   disabled={donorLoading || !donorForm.name || !donorForm.bloodType || !donorForm.district || !donorForm.phone}
-                  className="w-full py-4 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl font-extrabold text-sm shadow-lg transition-all flex items-center justify-center space-x-2"
+                  className="w-full py-4 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl font-extrabold text-sm shadow-lg transition-all flex items-center justify-center space-x-2 min-h-[48px]"
                 >
                   {donorLoading ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} />}
                   <span>{donorLoading ? (isTa ? 'பதிவு செய்கிறது...' : 'Registering...') : (isTa ? 'தானியாளராக பதிவு செய்' : 'Register as Donor')}</span>
@@ -764,7 +782,7 @@ export const BloodBank: React.FC<BloodBankProps> = ({ language }) => {
                 <button
                   onClick={handleRegisterBank}
                   disabled={bankLoading || !bankForm.name || !bankForm.address || !bankForm.district || !bankForm.phone}
-                  className="w-full py-4 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl font-extrabold text-sm shadow-lg transition-all flex items-center justify-center space-x-2"
+                  className="w-full py-4 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl font-extrabold text-sm shadow-lg transition-all flex items-center justify-center space-x-2 min-h-[48px]"
                 >
                   {bankLoading ? <Loader2 size={18} className="animate-spin" /> : <Building2 size={18} />}
                   <span>{bankLoading ? (isTa ? 'பதிவு செய்கிறது...' : 'Registering...') : (isTa ? 'வங்கியை பதிவு செய்து கையிருப்பை புதுப்பிக்கவும்' : 'Register Bank & Update Stock')}</span>

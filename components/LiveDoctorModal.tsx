@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  UserCheck, 
-  PhoneCall, 
-  Video, 
-  X, 
-  ShieldCheck, 
-  Clock, 
-  Stethoscope, 
-  Sparkles,
-  CheckCircle,
-  Headphones
-} from 'lucide-react';
+import { Stethoscope, PhoneCall, Video, UserCheck, Clock, X, AlertCircle, Loader2 } from 'lucide-react';
 import { SupportedLanguage } from '../types';
+import { t } from '../translations';
 
 interface LiveDoctorModalProps {
   isOpen: boolean;
@@ -20,176 +10,165 @@ interface LiveDoctorModalProps {
 }
 
 export const LiveDoctorModal: React.FC<LiveDoctorModalProps> = ({ isOpen, onClose, language }) => {
-  const [connectingState, setConnectingState] = useState<'IDLE' | 'SEARCHING' | 'CONNECTED'>('IDLE');
-  const [selectedConsultType, setSelectedConsultType] = useState<'AUDIO' | 'VIDEO'>('AUDIO');
+  const lang = language.code;
+  const isTa = lang === 'ta';
+
+  const [callMode, setCallMode] = useState<'AUDIO' | 'VIDEO'>('AUDIO');
+  const [connecting, setConnecting] = useState(false);
+  const [connected, setConnected] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleStartConsult = () => {
-    setConnectingState('SEARCHING');
+  const handleStartConsultation = () => {
+    setConnecting(true);
     setTimeout(() => {
-      setConnectingState('CONNECTED');
-    }, 2500);
+      setConnecting(false);
+      setConnected(true);
+    }, 2000);
+  };
+
+  const handleReset = () => {
+    setConnecting(false);
+    setConnected(false);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col border border-emerald-100">
-        
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-3 md:p-6 animate-in fade-in">
+      <div className="bg-white rounded-3xl max-w-xl w-full border border-emerald-200 shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-emerald-600 text-white p-6 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-emerald-700 to-emerald-600 text-white p-5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-white/20 rounded-2xl">
-              <Stethoscope size={24} />
+            <div className="p-2 bg-white/20 rounded-2xl">
+              <Stethoscope size={24} className="text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-lg leading-tight">Live Doctor Consultation</h3>
-              <p className="text-xs text-emerald-100 mt-0.5">Connect with certified duty medical officers</p>
+              <h2 className="font-black text-lg">{t(lang, 'doc.title')}</h2>
+              <p className="text-xs text-emerald-100">{t(lang, 'doc.subtitle')}</p>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-          >
-            <X size={18} />
+          <button onClick={() => { handleReset(); onClose(); }} className="p-2 hover:bg-white/20 rounded-full transition-colors">
+            <X size={20} />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {connectingState === 'IDLE' && (
-            <>
-              <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-start space-x-3">
-                <ShieldCheck size={24} className="text-emerald-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-emerald-900 leading-relaxed">
-                  <p className="font-bold">24/7 Telemedicine Hotline & Live Duty Officer</p>
-                  <p className="mt-1 opacity-90">
-                    Free triage consultation provided in cooperation with National Tele-Health Services (104) and local community healthcare networks.
-                  </p>
+        {/* Body */}
+        <div className="p-6 space-y-5">
+          {!connecting && !connected && (
+            <div className="space-y-4">
+              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start space-x-3">
+                <AlertCircle size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-emerald-900 space-y-1 font-medium">
+                  <p className="font-bold">{t(lang, 'doc.notice')}</p>
+                  <p>{t(lang, 'doc.notice.desc')}</p>
                 </div>
               </div>
 
-              {/* Consultation Type Selector */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Select Mode</label>
+              {/* Mode Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">{t(lang, 'doc.mode')}</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => setSelectedConsultType('AUDIO')}
-                    className={`p-4 rounded-2xl border-2 text-left flex flex-col items-start transition-all ${
-                      selectedConsultType === 'AUDIO' 
-                        ? 'border-emerald-600 bg-emerald-50/50 text-emerald-900 shadow-sm' 
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    onClick={() => setCallMode('AUDIO')}
+                    className={`p-4 rounded-2xl border-2 flex items-center space-x-3 transition-all ${
+                      callMode === 'AUDIO' ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-sm' : 'border-slate-200 bg-white text-slate-700'
                     }`}
                   >
-                    <Headphones size={24} className={selectedConsultType === 'AUDIO' ? 'text-emerald-600' : 'text-slate-400'} />
-                    <span className="font-bold text-sm mt-2">Audio Call</span>
-                    <span className="text-[10px] text-slate-500 mt-0.5">Low bandwidth suitable</span>
+                    <PhoneCall size={20} className={callMode === 'AUDIO' ? 'text-emerald-600' : 'text-slate-400'} />
+                    <div className="text-left">
+                      <p className="font-bold text-xs">{t(lang, 'doc.audio')}</p>
+                      <p className="text-[10px] opacity-75">{t(lang, 'doc.audio.desc')}</p>
+                    </div>
                   </button>
 
                   <button
-                    onClick={() => setSelectedConsultType('VIDEO')}
-                    className={`p-4 rounded-2xl border-2 text-left flex flex-col items-start transition-all ${
-                      selectedConsultType === 'VIDEO' 
-                        ? 'border-emerald-600 bg-emerald-50/50 text-emerald-900 shadow-sm' 
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    onClick={() => setCallMode('VIDEO')}
+                    className={`p-4 rounded-2xl border-2 flex items-center space-x-3 transition-all ${
+                      callMode === 'VIDEO' ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-sm' : 'border-slate-200 bg-white text-slate-700'
                     }`}
                   >
-                    <Video size={24} className={selectedConsultType === 'VIDEO' ? 'text-emerald-600' : 'text-slate-400'} />
-                    <span className="font-bold text-sm mt-2">Video Call</span>
-                    <span className="text-[10px] text-slate-500 mt-0.5">Visual symptom check</span>
+                    <Video size={20} className={callMode === 'VIDEO' ? 'text-emerald-600' : 'text-slate-400'} />
+                    <div className="text-left">
+                      <p className="font-bold text-xs">{t(lang, 'doc.video')}</p>
+                      <p className="text-[10px] opacity-75">{t(lang, 'doc.video.desc')}</p>
+                    </div>
                   </button>
                 </div>
               </div>
 
-              {/* Doctor Status Card */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+              {/* Duty Doctor Available Card */}
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                      Dr
-                    </div>
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-black">
+                    <UserCheck size={20} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-800">Duty Medical Officer Available</p>
-                    <p className="text-[10px] text-slate-500 flex items-center">
-                      <Clock size={10} className="mr-1 text-emerald-600" /> Avg wait time: &lt; 1 min
+                    <p className="font-bold text-xs text-slate-800">{t(lang, 'doc.available')}</p>
+                    <p className="text-[10px] text-slate-500 flex items-center mt-0.5">
+                      <Clock size={10} className="mr-1" /> {t(lang, 'doc.wait')}
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">
-                  Online
-                </span>
+                <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">{t(lang, 'doc.online')}</span>
               </div>
 
               <button
-                onClick={handleStartConsult}
-                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm shadow-md transition-all flex items-center justify-center space-x-2"
+                onClick={handleStartConsultation}
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-extrabold text-sm shadow-lg transition-all flex items-center justify-center space-x-2 min-h-[48px]"
               >
-                <Sparkles size={18} />
-                <span>Connect to Available Doctor Now</span>
+                <PhoneCall size={18} />
+                <span>{t(lang, 'doc.connect')}</span>
               </button>
 
-              <div className="text-center pt-2">
-                <a
-                  href="tel:104"
-                  className="text-xs font-bold text-emerald-700 hover:underline flex items-center justify-center"
-                >
-                  <PhoneCall size={14} className="mr-1.5" />
-                  Or direct dial 104 (National Health Helpline)
+              <div className="text-center">
+                <a href="tel:104" className="text-xs text-emerald-600 font-bold hover:underline">
+                  {t(lang, 'doc.dial')}
                 </a>
               </div>
-            </>
-          )}
-
-          {connectingState === 'SEARCHING' && (
-            <div className="text-center py-10 space-y-4">
-              <div className="w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto" />
-              <h4 className="font-bold text-slate-800">Assigning Duty Medical Officer...</h4>
-              <p className="text-xs text-slate-500">Connecting via secure tele-health channel in {language.nativeName}</p>
             </div>
           )}
 
-          {connectingState === 'CONNECTED' && (
-            <div className="text-center py-6 space-y-6 animate-in fade-in">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle size={36} />
-              </div>
+          {connecting && (
+            <div className="py-12 text-center space-y-4">
+              <Loader2 size={40} className="animate-spin text-emerald-600 mx-auto" />
+              <h3 className="font-extrabold text-slate-800 text-base">{t(lang, 'doc.searching')}</h3>
+              <p className="text-xs text-slate-500">{t(lang, 'doc.searching.desc')}</p>
+            </div>
+          )}
 
-              <div className="space-y-1">
-                <h4 className="font-bold text-slate-800 text-lg">Consultation Line Ready!</h4>
-                <p className="text-xs text-slate-500">Dr. S. Ramesh (MBBS, General Medicine) is on standby.</p>
-              </div>
-
-              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl text-left text-xs text-emerald-900 space-y-2">
-                <div className="flex justify-between font-bold">
-                  <span>Hotline Number:</span>
-                  <span>104 / +91-1800-425-3993</span>
+          {connected && (
+            <div className="space-y-4 animate-in fade-in">
+              <div className="bg-emerald-50 border border-emerald-300 p-5 rounded-3xl text-center space-y-3">
+                <div className="w-16 h-16 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto shadow-md">
+                  <UserCheck size={32} />
                 </div>
-                <div className="flex justify-between">
-                  <span>Language:</span>
-                  <span>{language.name} ({language.nativeName})</span>
+                <div>
+                  <h3 className="font-black text-emerald-900 text-base">{t(lang, 'doc.ready')}</h3>
+                  <p className="text-xs text-emerald-800 mt-1 font-medium">{t(lang, 'doc.standby')}</p>
+                </div>
+
+                <div className="bg-white p-3 rounded-2xl border border-emerald-200 text-xs font-semibold text-slate-800 space-y-1">
+                  <p><strong>{t(lang, 'doc.hotline')}</strong> 104 (Toll-Free)</p>
+                  <p><strong>{t(lang, 'doc.language')}</strong> {language.nativeName} ({language.name})</p>
                 </div>
               </div>
 
               <a
                 href="tel:104"
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm shadow-lg transition-all flex items-center justify-center space-x-2"
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-extrabold text-sm shadow-lg transition-all flex items-center justify-center space-x-2 min-h-[48px]"
               >
-                <PhoneCall size={20} />
-                <span>Tap to Call Duty Doctor (104)</span>
+                <PhoneCall size={18} />
+                <span>{t(lang, 'doc.call.btn')}</span>
               </a>
 
               <button
-                onClick={() => setConnectingState('IDLE')}
-                className="text-xs text-slate-400 hover:text-slate-600 font-medium"
+                onClick={handleReset}
+                className="w-full py-2.5 text-xs text-slate-500 font-bold hover:underline"
               >
-                Back to options
+                {t(lang, 'doc.back')}
               </button>
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

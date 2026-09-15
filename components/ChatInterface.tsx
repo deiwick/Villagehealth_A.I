@@ -1,8 +1,8 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Info, ExternalLink, MapPin, Stethoscope, PhoneCall } from 'lucide-react';
 import { Message, SupportedLanguage } from '../types';
 import { chatWithHealthAssistant, parseGroundingSources } from '../services/geminiService';
+import { t } from '../translations';
 
 interface ChatInterfaceProps {
   language: SupportedLanguage;
@@ -11,9 +11,8 @@ interface ChatInterfaceProps {
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ language, location, onOpenLiveDoctor }) => {
-  const welcomeText = language.code === 'ta' 
-    ? 'வணக்கம்! நான் உங்கள் கிராம சுகாதாரம் (VillageHealth) உதவியாளன். உங்கள் அறிகுறிகள், மருந்துகள் மற்றும் மருத்துவமனை தகவல்களை என்னிடம் கேட்கலாம்.'
-    : 'Hello! I am your VillageHealth Assistant. I can help you with health information, symptom guidance, and finding local clinics. How are you feeling today?';
+  const lang = language.code;
+  const welcomeText = t(lang, 'chat.welcome');
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -71,7 +70,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ language, location, onOpe
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        text: response.text || "I'm sorry, I couldn't process that. Please try again.",
+        text: response.text || (lang === 'ta' ? 'மன்னிக்கவும், தகவலை செயலாக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.' : "I'm sorry, I couldn't process that. Please try again."),
         timestamp: Date.now(),
         groundingSources: sources,
       };
@@ -79,11 +78,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ language, location, onOpe
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error: any) {
       console.error("Chat Error:", error);
-      const detail = error?.message || String(error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        text: `Error connecting to AI service: ${detail}\n\nPlease check your GEMINI_API_KEY in .env.local and restart the server if needed.`,
+        text: t(lang, 'chat.error'),
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -98,15 +96,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ language, location, onOpe
       <div className="bg-emerald-50 border-b border-emerald-100 px-4 py-2.5 flex items-center justify-between">
         <div className="flex items-center space-x-2 text-xs font-semibold text-emerald-900">
           <Stethoscope size={16} className="text-emerald-600" />
-          <span>Need direct medical advice?</span>
+          <span>{t(lang, 'chat.advice')}</span>
         </div>
         {onOpenLiveDoctor && (
           <button 
             onClick={onOpenLiveDoctor}
-            className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95"
+            className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 min-h-[36px]"
           >
-            <PhoneCall size={12} />
-            <span>Connect Live Doctor</span>
+            <PhoneCall size={13} />
+            <span>{t(lang, 'chat.livedoctor')}</span>
           </button>
         )}
       </div>
@@ -127,7 +125,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ language, location, onOpe
               {msg.groundingSources && msg.groundingSources.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-slate-100">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center">
-                    <Info size={12} className="mr-1" /> Reliable Sources
+                    <Info size={12} className="mr-1" /> {t(lang, 'chat.sources')}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {msg.groundingSources.map((source, idx) => (
@@ -138,7 +136,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ language, location, onOpe
                         rel="noopener noreferrer"
                         className="flex items-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
                       >
-                        <span className="truncate max-w-[120px]">{source.title || 'View Resource'}</span>
+                        <span className="truncate max-w-[120px]">{source.title || (lang === 'ta' ? 'ஆதாரம்' : 'View Resource')}</span>
                         <ExternalLink size={12} className="ml-1.5 shrink-0" />
                       </a>
                     ))}
@@ -170,8 +168,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ language, location, onOpe
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={`Ask in ${language.nativeName}...`}
-              className="w-full bg-slate-100 border-none rounded-2xl py-3.5 pl-4 pr-12 focus:ring-2 focus:ring-emerald-500 transition-all text-slate-800"
+              placeholder={t(lang, 'chat.placeholder')}
+              className="w-full bg-slate-100 border-none rounded-2xl py-3.5 pl-4 pr-12 focus:ring-2 focus:ring-emerald-500 transition-all text-slate-800 text-sm font-medium"
               disabled={isLoading}
             />
             {location && (
@@ -183,7 +181,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ language, location, onOpe
           <button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className={`p-3.5 rounded-2xl transition-all shadow-md ${
+            className={`p-3.5 rounded-2xl transition-all shadow-md shrink-0 min-w-[48px] min-h-[48px] flex items-center justify-center ${
               !input.trim() || isLoading 
                 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
                 : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95'
@@ -193,7 +191,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ language, location, onOpe
           </button>
         </div>
         <p className="text-[10px] text-center text-slate-400 mt-2">
-          VillageHealth AI can make mistakes. Always consult a local health worker for medical decisions.
+          {t(lang, 'chat.footer')}
         </p>
       </div>
     </div>

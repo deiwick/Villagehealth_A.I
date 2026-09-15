@@ -1,4 +1,3 @@
-
 import { SupportedLanguage } from './types';
 
 export const LANGUAGES: SupportedLanguage[] = [
@@ -13,15 +12,14 @@ export const LANGUAGES: SupportedLanguage[] = [
 ];
 
 export const SPECIALTIES = [
-  { id: 'all', name: 'All Facilities', icon: 'Hospital' },
-  { id: 'pediatrics', name: 'Pediatrics (Children)', icon: 'Baby' },
-  { id: 'cardiology', name: 'Cardiology (Heart Care)', icon: 'HeartPulse' },
-  { id: 'emergency', name: 'Emergency & Trauma', icon: 'Siren' },
-  { id: 'general', name: 'General Physician', icon: 'Stethoscope' },
-  { id: 'maternity', name: "Maternity & Women's", icon: 'UserPlus' },
-  { id: 'pharmacy', name: 'Pharmacy & Meds', icon: 'Pill' },
+  { id: 'all', name: 'All Facilities', nameTa: 'அனைத்து வசதிகள்', icon: 'Hospital' },
+  { id: 'pediatrics', name: 'Pediatrics (Children)', nameTa: 'குழந்தைகள் நல மருத்துவம்', icon: 'Baby' },
+  { id: 'cardiology', name: 'Cardiology (Heart Care)', nameTa: 'இதய மருத்துவம்', icon: 'HeartPulse' },
+  { id: 'emergency', name: 'Emergency & Trauma', nameTa: 'அவசர சிகிச்சை', icon: 'Siren' },
+  { id: 'general', name: 'General Physician', nameTa: 'பொது மருத்துவம்', icon: 'Stethoscope' },
+  { id: 'maternity', name: "Maternity & Women's", nameTa: 'மகப்பேறு மருத்துவம்', icon: 'UserPlus' },
+  { id: 'pharmacy', name: 'Pharmacy & Meds', nameTa: 'மருந்தகம்', icon: 'Pill' },
 ];
 
 export const APP_NAME = "VillageHealth AI";
 export const MEDICAL_DISCLAIMER = "Disclaimer: This AI assistant is for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of a qualified health provider with any questions you may have regarding a medical condition.";
-
